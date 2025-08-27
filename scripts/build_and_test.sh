@@ -5,14 +5,14 @@ echo "🚀 Building NCS Self-Healing System..."
 
 # Build all Docker images
 echo "📦 Building Docker images..."
-docker-compose build
+docker-compose -f config/docker/docker-compose.yml -f ../config/docker/docker-compose -f config/docker/docker-compose.yml.yml build
 
 # Create necessary directories
-mkdir -p results logs telemetry/grafana/{dashboards,provisioning}
-mkdir -p telemetry/mosquitto/config
+mkdir -p ../data/results ../data/logs ../src/telemetry/grafana/{dashboards,provisioning}
+mkdir -p ../src/src/telemetry/mosquitto/config
 
 # Create mosquitto config
-cat > telemetry/mosquitto/config/mosquitto.conf << EOL
+cat > ../src/src/telemetry/mosquitto/config/mosquitto.conf << EOL
 allow_anonymous true
 listener 1883
 listener 9001
@@ -21,7 +21,7 @@ EOL
 
 # Start the system
 echo "🏁 Starting system..."
-docker-compose up -d
+docker-compose -f config/docker/docker-compose.yml -f ../config/docker/docker-compose -f config/docker/docker-compose.yml.yml up -d
 
 # Wait for services
 echo "⏳ Waiting for services to be ready..."
@@ -57,6 +57,6 @@ echo "🎛️  Controller API: http://localhost:5001/status"
 echo "🤖 Agent API: http://localhost:5002/status"
 echo ""
 echo "To run experiments:"
-echo "  cd ansible && ansible-playbook experiments.yml -e experiment_type=baseline"
-echo "  cd ansible && ansible-playbook experiments.yml -e experiment_type=dos_attack"
+echo "  cd config/ansible && ansible-playbook experiments.yml -e experiment_type=baseline"
+echo "  cd config/ansible && ansible-playbook experiments.yml -e experiment_type=dos_attack"
 

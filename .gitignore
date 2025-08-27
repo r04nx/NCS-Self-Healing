@@ -33,7 +33,7 @@ ENV/
 
 # Logs
 *.log
-logs/*.log
+data/logs/*.log
 
 # OS
 .DS_Store

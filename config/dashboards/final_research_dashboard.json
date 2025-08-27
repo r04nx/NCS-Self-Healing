@@ -1,0 +1,264 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🔬 NCS Self-Healing: Ultimate Research Dashboard (Live Data)",
+    "tags": ["ncs", "research", "self-healing", "control-systems", "live"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "🎯 Live Experiment Phase",
+        "type": "stat",
+        "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
+        "targets": [{
+          "query": "SELECT last(\"current_phase\") FROM \"experiment_conditions\" WHERE time > now() - 5m",
+          "rawQuery": true,
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          }
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "value"},
+            "custom": {
+              "displayMode": "lcd",
+              "orientation": "horizontal"
+            },
+            "mappings": [
+              {"options": {"BASELINE": {"color": "green", "text": "🟢 BASELINE PHASE - Normal Operations"}}, "type": "value"},
+              {"options": {"ATTACK": {"color": "red", "text": "🔴 ATTACK PHASE - System Under Stress"}}, "type": "value"},
+              {"options": {"RECOVERY": {"color": "yellow", "text": "🟡 RECOVERY PHASE - Self-Healing Active"}}, "type": "value"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "📊 Stability Margin Analysis",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 3},
+        "targets": [
+          {
+            "query": "SELECT mean(\"stability_margin\") FROM \"control_kpis\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "Stability Margin",
+            "rawQuery": true
+          },
+          {
+            "query": "SELECT last(\"baseline_stability\") FROM \"experiment_conditions\" WHERE time > now() - 30m GROUP BY time(30s) fill(previous)",
+            "alias": "Baseline Target",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "pointSize": 5,
+              "fillOpacity": 20
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "💰 Control Cost vs Baseline",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 3},
+        "targets": [
+          {
+            "query": "SELECT mean(\"control_cost\") FROM \"control_kpis\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "Current Control Cost",
+            "rawQuery": true
+          },
+          {
+            "query": "SELECT last(\"baseline_cost\") FROM \"experiment_conditions\" WHERE time > now() - 30m GROUP BY time(30s) fill(previous)",
+            "alias": "Baseline Cost",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short",
+            "min": 0,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "⚡ Control Performance Metrics",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 11},
+        "targets": [
+          {
+            "query": "SELECT mean(\"control_efficiency\") FROM \"control_kpis\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "Control Efficiency",
+            "rawQuery": true
+          },
+          {
+            "query": "SELECT mean(\"overshoot\") FROM \"control_kpis\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "Overshoot",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "percentunit",
+            "min": 0,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "🌐 Network Quality Impact",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 11},
+        "targets": [
+          {
+            "query": "SELECT mean(\"latency_p95\") FROM \"network_kpis\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "95th % Latency (ms)",
+            "rawQuery": true
+          },
+          {
+            "query": "SELECT mean(\"packet_loss\") FROM \"network_kpis\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "Packet Loss %",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "🎯 System Resilience Score",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 11},
+        "targets": [{
+          "query": "SELECT last(\"system_resilience\") FROM \"research_kpis\" WHERE time > now() - 5m",
+          "rawQuery": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.3},
+                {"color": "green", "value": 0.7}
+              ]
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "📈 Live System Health Status",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 19},
+        "targets": [
+          {
+            "query": "SELECT last(\"stability_margin\") FROM \"control_kpis\" WHERE time > now() - 1m",
+            "alias": "Current Stability",
+            "rawQuery": true
+          },
+          {
+            "query": "SELECT last(\"control_cost\") FROM \"control_kpis\" WHERE time > now() - 1m",
+            "alias": "Control Cost",
+            "rawQuery": true
+          },
+          {
+            "query": "SELECT last(\"network_quality\") FROM \"network_kpis\" WHERE time > now() - 1m",
+            "alias": "Network Quality",
+            "rawQuery": true
+          },
+          {
+            "query": "SELECT last(\"system_health\") FROM \"experiment_conditions\" WHERE time > now() - 1m",
+            "alias": "System Status",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "value"},
+            "mappings": [
+              {"options": {"HEALTHY": {"color": "green", "text": "✅ HEALTHY"}}, "type": "value"},
+              {"options": {"UNDER_ATTACK": {"color": "red", "text": "⚠️ UNDER ATTACK"}}, "type": "value"},
+              {"options": {"RECOVERING": {"color": "yellow", "text": "🔄 RECOVERING"}}, "type": "value"}
+            ],
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.5},
+                {"color": "green", "value": 0.8}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "🔬 Research Timeline & Phase Progress",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 19},
+        "targets": [
+          {
+            "query": "SELECT \"current_phase\", \"phase_progress\" FROM \"experiment_conditions\" WHERE time > now() - 30m",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "stepAfter",
+              "pointSize": 8,
+              "fillOpacity": 30
+            },
+            "mappings": [
+              {"options": {"BASELINE": {"color": "green", "text": "BASELINE"}}, "type": "value"},
+              {"options": {"ATTACK": {"color": "red", "text": "ATTACK"}}, "type": "value"},
+              {"options": {"RECOVERY": {"color": "yellow", "text": "RECOVERY"}}, "type": "value"}
+            ]
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-30m",
+      "to": "now"
+    },
+    "refresh": "2s",
+    "schemaVersion": 37,
+    "version": 0,
+    "weekStart": ""
+  }
+}

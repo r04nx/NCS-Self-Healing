@@ -1,0 +1,92 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "NCS Self-Healing: Ultimate Research Dashboard (Updated)",
+    "tags": ["ncs", "research", "self-healing", "control-systems"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "🎯 Experiment Phase Control",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [{
+          "query": "SELECT last(\"experiment_phase\") FROM \"control-kpis\".\"autogen\".\"ncs_experiments\" WHERE time > now() - 5m",
+          "rawQuery": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "value"},
+            "mappings": [
+              {"options": {"BASELINE": {"color": "green", "text": "🟢 BASELINE PHASE"}}, "type": "value"},
+              {"options": {"ATTACK": {"color": "red", "text": "🔴 ATTACK PHASE"}}, "type": "value"},
+              {"options": {"RECOVERY": {"color": "yellow", "text": "🟡 RECOVERY PHASE"}}, "type": "value"}
+            ],
+            "custom": {
+              "displayMode": "lcd",
+              "orientation": "horizontal"
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "📊 Stability Margin Analysis",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "query": "SELECT mean(\"stability_margin\") FROM \"control-kpis\".\"autogen\".\"ncs_experiments\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "Stability Margin",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "pointSize": 5,
+              "fillOpacity": 10
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "💰 Control Cost Efficiency",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "query": "SELECT mean(\"control_cost\") FROM \"control-kpis\".\"autogen\".\"ncs_experiments\" WHERE time > now() - 30m GROUP BY time(10s) fill(null)",
+            "alias": "Control Cost",
+            "rawQuery": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short",
+            "min": 0,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-30m",
+      "to": "now"
+    },
+    "refresh": "5s",
+    "schemaVersion": 37,
+    "version": 0
+  }
+}

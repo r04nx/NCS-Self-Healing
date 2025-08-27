@@ -1,0 +1,39 @@
+---
+- name: NCS Self-Healing Experiments Automation
+  hosts: localhost
+  gather_facts: true
+  vars:
+    experiment_type: "{{ experiment_type | default('baseline') }}"
+    experiment_duration: "{{ experiment_duration | default(300) }}"
+    results_dir: "../../data/results/{{ experiment_type }}_{{ ansible_date_time.epoch }}"
+
+  tasks:
+    - name: Create results directory
+      file:
+        path: "{{ results_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Setup experiment environment
+      include_tasks: tasks/setup_experiment.yml
+
+    - name: Run baseline phase
+      include_tasks: tasks/baseline_phase.yml
+      when: experiment_type in ['baseline', 'all']
+
+    - name: Run disturbance phase
+      include_tasks: tasks/disturbance_phase.yml
+      when: experiment_type in ['dos_attack', 'network_delay', 'packet_loss', 'false_data', 'all']
+
+    - name: Run agent evaluation
+      include_tasks: tasks/agent_evaluation.yml
+      when: experiment_type in ['agent_comparison', 'all']
+
+    - name: Collect results
+      include_tasks: tasks/collect_results.yml
+
+    - name: Generate analysis
+      include_tasks: tasks/analysis.yml
+
+    - name: Cleanup experiment
+      include_tasks: tasks/cleanup.yml

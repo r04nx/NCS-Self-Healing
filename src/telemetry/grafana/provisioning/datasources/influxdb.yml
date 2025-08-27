@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-NCS
+    type: influxdb
+    uid: influxdb-ncs-uid
+    access: proxy
+    url: http://influxdb:8086
+    database: control-kpis
+    user: admin
+    secureJsonData:
+      password: ncs-research-2024
+    isDefault: true
+    editable: false

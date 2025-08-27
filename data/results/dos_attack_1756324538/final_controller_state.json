@@ -1,0 +1,18 @@
+{
+    "active": true,
+    "control_input": 0.0,
+    "control_type": "lqr",
+    "kpis": {
+        "control_cost": 0.0,
+        "overshoot": 0.1,
+        "settling_time": 3.2,
+        "steady_state_error": 0.05
+    },
+    "plant_state": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "sampling_period": 0.01
+}
