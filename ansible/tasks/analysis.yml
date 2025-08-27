@@ -1,0 +1,33 @@
+---
+- name: Calculate baseline statistics
+  shell: |
+    cd {{ results_dir }}
+    if [ -f baseline_metrics.csv ]; then
+        echo "Calculating baseline performance metrics..."
+        
+        # Extract control costs and compute statistics
+        awk -F',' '{
+            if (NR > 1) {  # Skip header
+                if ($3 ~ /"control_cost":[0-9.]+/) {
+                    match($3, /"control_cost":([0-9.]+)/, arr)
+                    if (arr[1] != "") print arr[1]
+                }
+            }
+        }' baseline_metrics.csv > control_costs.tmp
+        
+        if [ -s control_costs.tmp ]; then
+            avg_cost=$(awk '{sum+=$1; n++} END {print sum/n}' control_costs.tmp)
+            echo "Average Control Cost: $avg_cost" > performance_summary.txt
+        fi
+        
+        # Count total data points
+        data_points=$(wc -l < baseline_metrics.csv)
+        echo "Total Data Points Collected: $data_points" >> performance_summary.txt
+        
+        rm -f *.tmp
+    fi
+  register: analysis_result
+
+- name: Log analysis completion
+  debug:
+    msg: "Statistical analysis completed. Results in {{ results_dir }}/performance_summary.txt"

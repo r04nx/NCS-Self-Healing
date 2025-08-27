@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+  # Time series database for telemetry
+  influxdb:
+    image: influxdb:2.7
+    container_name: ncs-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=ncs-research-2024
+      - DOCKER_INFLUXDB_INIT_ORG=ncs-lab
+      - DOCKER_INFLUXDB_INIT_BUCKET=control-kpis
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+
+  # Visualization dashboard
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: ncs-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=ncs-research-2024
+      - GF_INSTALL_PLUGINS=grafana-influxdb-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./telemetry/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./telemetry/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - influxdb
+
+  # Message broker for pub/sub
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: ncs-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./telemetry/mosquitto/config:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-logs:/mosquitto/log
+
+  # Controller service (LQR/PID)
+  controller:
+    build: ./controllers
+    container_name: ncs-controller
+    ports:
+      - "5001:5001"  # REST API
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - INFLUXDB_URL=http://influxdb:8086
+      - CONTROL_TYPE=lqr
+      - SAMPLING_PERIOD=0.01
+    depends_on:
+      - mqtt-broker
+      - influxdb
+    networks:
+      - ncs-net
+
+  # Plant simulation (inverted pendulum)
+  plant-pendulum:
+    build: ./plants
+    container_name: ncs-plant-pendulum
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - PLANT_TYPE=pendulum
+      - PLANT_ID=plant1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - ncs-net
+
+  # Plant simulation (2nd order unstable)
+  plant-unstable:
+    build: ./plants
+    container_name: ncs-plant-unstable
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - PLANT_TYPE=unstable
+      - PLANT_ID=plant2
+    depends_on:
+      - mqtt-broker
+    networks:
+      - ncs-net
+
+  # Multi-agent system
+  agent-coordinator:
+    build: ./agents
+    container_name: ncs-agents
+    ports:
+      - "5002:5002"  # Agent API
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - INFLUXDB_URL=http://influxdb:8086
+      - CONTROLLER_URL=http://controller:5001
+      - AGENT_TYPE=reflex  # reflex, bandit, marl
+    depends_on:
+      - mqtt-broker
+      - influxdb
+      - controller
+    networks:
+      - ncs-net
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+
+  # Adversary/chaos engineering
+  adversary:
+    build: ./chaos
+    container_name: ncs-adversary
+    environment:
+      - MQTT_BROKER=mqtt-broker
+    depends_on:
+      - mqtt-broker
+    networks:
+      - ncs-net
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+
+  # Telemetry collector
+  telemetry:
+    build: ./telemetry
+    container_name: ncs-telemetry
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - INFLUXDB_URL=http://influxdb:8086
+    depends_on:
+      - mqtt-broker
+      - influxdb
+    networks:
+      - ncs-net
+
+volumes:
+  influxdb-data:
+  grafana-data:
+  mosquitto-data:
+  mosquitto-logs:
+
+networks:
+  ncs-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

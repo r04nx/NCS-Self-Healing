@@ -1,0 +1,48 @@
+---
+- name: Log baseline phase start
+  debug:
+    msg: "Starting baseline phase - collecting system behavior under normal conditions"
+
+- name: Record initial system state
+  uri:
+    url: "http://localhost:5001/status"
+    method: GET
+  register: initial_controller_state
+
+- name: Record initial agent state  
+  uri:
+    url: "http://localhost:5002/status"
+    method: GET
+  register: initial_agent_state
+
+- name: Run baseline data collection
+  shell: |
+    echo "Recording baseline performance for {{ experiment_duration | default(60) }} seconds"
+    
+    start_time=$(date +%s)
+    end_time=$((start_time + {{ experiment_duration | default(60) }}))
+    
+    # Create baseline results file
+    mkdir -p {{ results_dir }}
+    
+    while [ $(date +%s) -lt $end_time ]; do
+        timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+        
+        # Get controller metrics
+        controller_data=$(curl -s http://localhost:5001/status || echo '{"error": "controller_unavailable"}')
+        
+        # Get agent metrics
+        agent_data=$(curl -s http://localhost:5002/status || echo '{"error": "agent_unavailable"}')
+        
+        # Log to file
+        echo "$timestamp,baseline,$controller_data,$agent_data" >> {{ results_dir }}/baseline_metrics.csv
+        
+        sleep 1
+    done
+  async: 90
+  poll: 5
+  register: baseline_collection
+
+- name: Log baseline phase completion
+  debug:
+    msg: "Baseline phase completed. Data collected in {{ results_dir }}/baseline_metrics.csv"

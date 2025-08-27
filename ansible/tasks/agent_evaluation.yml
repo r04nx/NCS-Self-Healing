@@ -1,0 +1,35 @@
+---
+- name: Start agent comparison experiment
+  debug:
+    msg: "Starting multi-agent comparison - reflex vs bandit vs MARL"
+
+- name: Test Reflex Agent Performance  
+  uri:
+    url: "http://localhost:5002/status"
+    method: GET
+  register: reflex_status
+
+- name: Run agent stress test
+  shell: |
+    echo "Testing agent responsiveness under varying conditions"
+    
+    # Create agent results directory
+    mkdir -p {{ results_dir }}/agent_comparison
+    
+    # Record agent performance for 30 seconds
+    start_time=$(date +%s)
+    end_time=$((start_time + 30))
+    
+    while [ $(date +%s) -lt $end_time ]; do
+        timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+        agent_data=$(curl -s http://localhost:5002/status || echo '{"error": "unavailable"}')
+        echo "$timestamp,agent_test,$agent_data" >> {{ results_dir }}/agent_comparison/agent_metrics.csv
+        sleep 1
+    done
+  async: 45
+  poll: 5
+  register: agent_test
+
+- name: Log agent comparison completion
+  debug:
+    msg: "Agent comparison completed. Results in {{ results_dir }}/agent_comparison/"

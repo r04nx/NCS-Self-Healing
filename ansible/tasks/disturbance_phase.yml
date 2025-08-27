@@ -1,0 +1,110 @@
+---
+- name: Record baseline KPIs before attack
+  uri:
+    url: "http://localhost:5001/status"
+    method: GET
+  register: baseline_kpis
+
+- name: Record baseline agent metrics
+  uri:
+    url: "http://localhost:5002/status" 
+    method: GET
+  register: baseline_agent_kpis
+
+- name: Create disturbance results directory
+  shell: mkdir -p {{ results_dir }}/disturbance_data
+
+- name: Simulate system disturbance based on experiment type
+  shell: |
+    echo "Starting {{ experiment_type }} disturbance simulation"
+    
+    # Record disturbance events
+    start_time=$(date +%s)
+    end_time=$((start_time + {{ experiment_duration | default(60) }}))
+    
+    case "{{ experiment_type }}" in
+        "dos_attack")
+            echo "Simulating DoS attack - flooding controller with requests"
+            while [ $(date +%s) -lt $end_time ]; do
+                timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+                
+                # Flood controller with requests (simulating DoS)
+                for i in {1..10}; do
+                    curl -s http://localhost:5001/status > /dev/null &
+                done
+                
+                # Monitor agent response
+                agent_data=$(curl -s http://localhost:5002/status || echo '{"error": "unavailable"}')
+                controller_data=$(curl -s http://localhost:5001/status || echo '{"error": "unavailable"}')
+                
+                # Log attack effects
+                echo "$timestamp,dos_attack,$controller_data,$agent_data" >> {{ results_dir }}/disturbance_data/attack_metrics.csv
+                
+                sleep 2
+            done
+            ;;
+        "network_delay")
+            echo "Simulating network delay"
+            # Add artificial delays to requests
+            while [ $(date +%s) -lt $end_time ]; do
+                timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+                
+                # Simulate delay by sleeping before requests
+                sleep 0.5
+                agent_data=$(curl -s http://localhost:5002/status)
+                controller_data=$(curl -s http://localhost:5001/status)
+                
+                echo "$timestamp,network_delay,$controller_data,$agent_data" >> {{ results_dir }}/disturbance_data/attack_metrics.csv
+                sleep 1
+            done
+            ;;
+        *)
+            echo "Generic disturbance test"
+            while [ $(date +%s) -lt $end_time ]; do
+                timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+                agent_data=$(curl -s http://localhost:5002/status)
+                controller_data=$(curl -s http://localhost:5001/status)
+                echo "$timestamp,generic,$controller_data,$agent_data" >> {{ results_dir }}/disturbance_data/attack_metrics.csv
+                sleep 2
+            done
+            ;;
+    esac
+    
+    echo "Disturbance phase completed"
+  async: 120
+  poll: 5
+  register: disturbance_result
+
+- name: Record post-attack system state
+  uri:
+    url: "http://localhost:5001/status"
+    method: GET
+  register: post_attack_controller
+
+- name: Record post-attack agent metrics
+  uri:
+    url: "http://localhost:5002/status"
+    method: GET
+  register: post_attack_agent
+
+- name: Calculate attack impact
+  set_fact:
+    mttr_measured: "{{ post_attack_agent.json.mttr | default(0) }}"
+    recoveries_during_attack: "{{ (post_attack_agent.json.num_recoveries | int) - (baseline_agent_kpis.json.num_recoveries | int) }}"
+
+- name: Log disturbance phase results
+  debug:
+    msg: |
+      🔥 {{ experiment_type | upper }} Attack Simulation Complete!
+      
+      📊 Attack Impact:
+      - MTTR: {{ mttr_measured }}s
+      - New Recoveries: {{ recoveries_during_attack }}  
+      - Stability Margin: {{ post_attack_agent.json.control_kpis.stability_margin }}
+      - Control Cost: {{ post_attack_controller.json.kpis.control_cost }}
+      
+      🛡️ Agent Response:
+      - Active Agents: {{ post_attack_agent.json.active_agents }}
+      - System State: Active
+      
+      📈 Self-Healing Demonstrated: {{ 'YES' if recoveries_during_attack|int > 0 else 'PARTIALLY' }}

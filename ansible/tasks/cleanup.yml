@@ -1,0 +1,26 @@
+---
+- name: Archive experiment results
+  shell: |
+    cd {{ results_dir }}/..
+    tar -czf {{ experiment_type }}_{{ ansible_date_time.epoch }}.tar.gz {{ experiment_type }}_{{ ansible_date_time.epoch }}
+    echo "Results archived as {{ experiment_type }}_{{ ansible_date_time.epoch }}.tar.gz"
+
+- name: Clean up temporary files
+  shell: |
+    cd {{ results_dir }}
+    rm -f *.tmp
+    echo "Temporary files cleaned"
+
+- name: Log experiment completion
+  debug:
+    msg: |
+      🎉 NCS Self-Healing Experiment Complete!
+      
+      📊 Experiment: {{ experiment_type }}
+      📂 Results: {{ results_dir }}
+      📦 Archive: {{ results_dir }}/{{ experiment_type }}_{{ ansible_date_time.epoch }}.tar.gz
+      
+      Next steps:
+      1. View results: cd {{ results_dir }}
+      2. Run analysis: python ../notebooks/research_analysis.py
+      3. Generate paper plots and figures

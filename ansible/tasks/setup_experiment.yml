@@ -1,0 +1,44 @@
+---
+- name: Start Docker Compose services
+  shell: |
+    cd ../
+    docker-compose up -d
+  register: compose_result
+
+- name: Wait for services to be ready
+  wait_for:
+    host: localhost
+    port: "{{ item }}"
+    delay: 10
+    timeout: 60
+  loop:
+    - 5001  # Controller
+    - 5002  # Agents
+    - 8086  # InfluxDB
+
+- name: Initialize controller with baseline parameters
+  uri:
+    url: "http://localhost:5001/set_lqr_weights"
+    method: POST
+    body_format: json
+    body:
+      Q: [10, 1, 10, 1]
+      R: 0.1
+    status_code: 200
+  register: controller_init
+
+- name: Reset agent metrics
+  uri:
+    url: "http://localhost:5002/reset_metrics"
+    method: POST
+    status_code: 200
+
+- name: Wait for system stabilization
+  pause:
+    seconds: 30
+
+- name: Log experiment start
+  debug:
+    msg: |
+      Experiment {{ experiment_type }} started at {{ ansible_date_time.iso8601 }}
+      Results will be saved to: {{ results_dir }}
